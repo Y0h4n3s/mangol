@@ -1,3 +1,5 @@
+
+// https://play.rust-lang.org/?version=stable&mode=debug&edition=2021&gist=12543b0d2e4aa4592bcb42ae174aaedc
 use std::cmp::max;
 use mangol_common::errors::MangolResult;
 use mangol_solana::{Token, TokenMint};
@@ -53,7 +55,7 @@ pub struct FibStrat {
 
 const FIB_RATIO: f64 = 1.618;
 const PRICE_FIB_RATIO: f64 = 0.0618;
-const TRADE_AMOUNT: f64 = 1.0;
+const TRADE_AMOUNT: f64 = 10.0;
 const RISK_TOLERANCE: u16 = 2;
 impl FibStrat {
 	pub fn new(max_position_depth: u16, action_interval_secs: u64, mango_client: MangoClient, sentiment: PriceSide, market: PerpMarketData) -> MangolResult<Self>{
@@ -316,7 +318,7 @@ impl FibStrat {
 					// therefore adjust depth to reflect current position size for the decision round
 					order.base_size = actual_base_filled as u64;
 					order.state = FibStratOrderState::Filled;
-					order.depth = if order.depth > RISK_TOLERANCE { order.depth - RISK_TOLERANCE} else {order.depth - 1};
+					order.depth = if order.depth > RISK_TOLERANCE { order.depth - RISK_TOLERANCE} else if order.depth >= 1 {order.depth - 1} else {0};
 					
 					self.position.state_history.push(previous_state.clone());
 				}
@@ -326,7 +328,12 @@ impl FibStrat {
 		
 	}
 	
-	pub fn decide_bearish(&mut self) -> MangolResult<()> {
+	pub fn sync_bullish(&mut self) -> MangolResult<()> {
+		
+		Ok(())
+	}
+		
+		pub fn decide_bearish(&mut self) -> MangolResult<()> {
 		
 		let mango_cache = self.mango_client.mango_cache.clone();
 		let perp_market_info: &PerpMarketInfo = self.mango_client.mango_group.perp_markets.get(self.market.market_index as usize).unwrap();
@@ -367,29 +374,7 @@ impl FibStrat {
 						base_size: 0
 					});
 				}
-				// FibStratPositionState::Buying(order) => {
-				// 	// calculate next price target and size
-				// 	let target_price = fib_calculator::get_price_at_n(order.depth + 1, average_price, 1)?;
-				// 	let next_quantity = self.get_quantity_lots_at_n(order.depth + 1)?;
-				//
-				// 	let next_order_hash = self.mango_client.place_perp_order(
-				// 		curr_perp_market_info,
-				// 		&self.market,
-				// 		Side::Ask,
-				// 		target_price,
-				// 		next_quantity,
-				// 		OrderType::Limit,
-				// 		order.depth == 0,
-				// 		Some(self.action_interval_secs as u64)
-				// 	)?;
-				// 	self.position.current_state = FibStratPositionState::Selling(FibStratOrder {
-				// 		depth: order.depth + 1,
-				// 		state: FibStratOrderState::Waiting,
-				// 		price: target_price,
-				// 		tx_hash: Some(next_order_hash),
-				// 		base_size: 0
-				// 	});
-				// }
+
 			}
 		} else {
 			match last_committed_state {
@@ -420,6 +405,10 @@ impl FibStrat {
 			}
 		}
 		
+		Ok(())
+	}
+	
+	pub fn decide_bullish(&mut self) -> MangolResult<()> {
 		Ok(())
 	}
 	pub fn start_trading(&mut self) -> MangolResult<()> {
