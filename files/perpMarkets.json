@@ -1,0 +1,134 @@
+[
+  {
+    "name": "MNGO-PERP",
+    "pubkey": "4nfmQP3KmUqEJ6qJLsS3offKgE96YUB4Rp7UQvm2Fbi9",
+    "base_symbol": "MNGO",
+    "base_decimals": 6,
+    "quote_decimals": 6,
+    "market_index": 0,
+    "bids_key": "4XU8wH9ivp7x7ohhTbWUZabg5WVkF7sBtqQCmFEV6qiN",
+    "asks_key": "4ZkS7ZZkxfsC3GtvvsHP3DFcUeByU9zzZELS4r8HCELo",
+    "events_key": "7orixrhZpjvofZGWZyyLFxSEt2tfFiost5kHEzd7jdet"
+  },
+  {
+    "name": "BTC-PERP",
+    "pubkey": "DtEcjPLyD4YtTBB4q8xwFZ9q49W89xZCZtJyrGebi5t8",
+    "base_symbol": "BTC",
+    "base_decimals": 6,
+    "quote_decimals": 6,
+    "market_index": 1,
+    "bids_key": "Bc8XaK5UTuDSCBtiESSUxBSb9t6xczhbAJnesPamMRir",
+    "asks_key": "BkWRiarqxP5Gwx7115LQPbjRmr3NjuSRXWBnduXXLGWR",
+    "events_key": "7t5Me8RieYKsFpfLEV8jnpqcqswNpyWD95ZqgUXuLV8Z"
+  },
+  {
+    "name": "ETH-PERP",
+    "pubkey": "DVXWg6mfwFvHQbGyaHke4h3LE9pSkgbooDSDgA4JBC8d",
+    "base_symbol": "ETH",
+    "base_decimals": 6,
+    "quote_decimals": 6,
+    "market_index": 2,
+    "bids_key": "DQv2sWhaHYbKrobHH6jAdkAXw13mnDdM9hVfRQtrUcMe",
+    "asks_key": "8NhLMV6huneGAqijuUgUFSshbAfXxdNj6ZMHSLb9aW8K",
+    "events_key": "9vDfKNPJkCvQv9bzR4JNTGciQC2RVHPVNMMHiVDgT1mw"
+  },
+  {
+    "name": "SOL-PERP",
+    "pubkey": "2TgaaVoHgnSeEtXvWTx13zQeTf4hYWAMEiMQdcG6EwHi",
+    "base_symbol": "SOL",
+    "base_decimals": 9,
+    "quote_decimals": 6,
+    "market_index": 3,
+    "bids_key": "Fu8q5EiFunGwSRrjFKjRUoMABj5yCoMEPccMbUiAT6PD",
+    "asks_key": "9qUxMSWBGAeNmXusQHuLfgSuYJqADyYoNLwZ63JJSi6V",
+    "events_key": "31cKs646dt1YkA3zPyxZ7rUAkxTBz279w4XEobFXcAKP"
+  },
+  {
+    "name": "SRM-PERP",
+    "pubkey": "4GkJj2znAr2pE2PBbak66E12zjCs2jkmeafiJwDVM9Au",
+    "base_symbol": "SRM",
+    "base_decimals": 6,
+    "quote_decimals": 6,
+    "market_index": 5,
+    "bids_key": "E8Dv9giJQgPqNaBxF9WKDUhJD7GZ5fwXfF1NQfeCCaQp",
+    "asks_key": "GMv773oHiNd4jaj8uQvr1kbzroY5BDK7QTNHD14ATjGJ",
+    "events_key": "BXSPmdHWP6fMqsCsT6kG8UN9uugAJxdDkQWy87njUQnL"
+  },
+  {
+    "name": "RAY-PERP",
+    "pubkey": "6WGoQr5mJAEpYCdX6qjju2vEnJuD7e8ZeYes7X7Shi7E",
+    "base_symbol": "RAY",
+    "base_decimals": 6,
+    "quote_decimals": 6,
+    "market_index": 6,
+    "bids_key": "9AHm1nsxG1e3zkHnFLzYUXd17qnCgM7aFJDDApXXrhVU",
+    "asks_key": "43dVtcFTgDHHr32V6vhvxU2gg11wK7oyK8DdfTQ2pQsy",
+    "events_key": "Css2MQhEvXMTKjp9REVZR9ZyUAYAZAPrnDvRoPxrQkeN"
+  },
+  {
+    "name": "FTT-PERP",
+    "pubkey": "AhgEayEGNw46ALHuC5ASsKyfsJzAm5JY8DWqpGMQhcGC",
+    "base_symbol": "FTT",
+    "base_decimals": 6,
+    "quote_decimals": 6,
+    "market_index": 8,
+    "bids_key": "5xihpD8yz9vt95WSHVpW8pVykffW7h5VHb2LkhGBMUck",
+    "asks_key": "G9HtAEwHRYBrz9ZpdDJH8Qs1hEZqNJ1BPm3veBsmEXbX",
+    "events_key": "5pHAhyEphQRVvLqvYF7dziofR52yZWuq8DThQFJvJ7r5"
+  },
+  {
+    "name": "ADA-PERP",
+    "pubkey": "Bh9UENAncoTEwE7NDim8CdeM1GPvw6xAT4Sih2rKVmWB",
+    "base_symbol": "ADA",
+    "base_decimals": 6,
+    "quote_decimals": 6,
+    "market_index": 9,
+    "bids_key": "ivYhvYgribqdCzDg4m8fUF9ejgJHE4mnRUseR4d9khN",
+    "asks_key": "F4UTmEXxEUgGSL7P3HePAuz3PsXvx6hWr256vqVnzxKE",
+    "events_key": "G6Dsw9KnP4G38hePtedTH6gDfDQmPJGJw8zipBJvKc12"
+  },
+  {
+    "name": "BNB-PERP",
+    "pubkey": "CqxX2QupYiYafBSbA519j4vRVxxecidbh2zwX66Lmqem",
+    "base_symbol": "BNB",
+    "base_decimals": 8,
+    "quote_decimals": 6,
+    "market_index": 11,
+    "bids_key": "6Pg82x4SSejLny5v1wSWs7QhnheLDq7EX1pMVY8LTsB3",
+    "asks_key": "6n2ooaNFP6X54ZiwDskhhVeW81F4hHNEibsJ8vfjVNDU",
+    "events_key": "GmX4qXMpXvs1DuUXNB4eqL1rfF8LeYEjkKgpFeYsm55n"
+  },
+  {
+    "name": "AVAX-PERP",
+    "pubkey": "EAC7jtzsoQwCbXj1M3DapWrNLnc3MBwXAarvWDPr2ZV9",
+    "base_symbol": "AVAX",
+    "base_decimals": 8,
+    "quote_decimals": 6,
+    "market_index": 12,
+    "bids_key": "BD1vpQjLXx7Rmd5n1SFNTLcwujPYTnFpoaArvPd9ixB9",
+    "asks_key": "8Q11iGHXFTr267J4bgbeEeWPYPSANVcs6NQWHQK4UrNs",
+    "events_key": "5Grgo9kLu692SUcJ6S7jtbi1WkdwiyRWgThAfN1PcvbL"
+  },
+  {
+    "name": "LUNA-PERP",
+    "pubkey": "BCJrpvsB2BJtqiDgKVC4N6gyX1y24Jz96C6wMraYmXss",
+    "base_symbol": "LUNA",
+    "base_decimals": 6,
+    "quote_decimals": 6,
+    "market_index": 13,
+    "bids_key": "AiBurBkETJHHujZxNHm6UPvBQ1LLLkNkckPoZLeuLnS1",
+    "asks_key": "7Vcbxj2M8fqaNGfRDsau47uXumfCBhCTA97D6PNDPWfe",
+    "events_key": "HDJ43o9Dxxu6yWRWPEce44gtCHauRGLXJwwtvD7GwEBx"
+  },
+  {
+    "name": "GMT-PERP",
+    "pubkey": "3hBYgfMHogR8X2JkpxvT8HMtUSbrE2PE61q64gZkWArr",
+    "base_symbol": "GMT",
+    "base_decimals": 9,
+    "quote_decimals": 6,
+    "market_index": 14,
+    "bids_key": "67jnTtxDdDqz6R18Do3AUUjBbZT3yysprGLhaucyKd93",
+    "asks_key": "DstVrGA3CBcq1r7op4yU7dX3sirzSgz1uicn63aYBMGz",
+    "events_key": "J2WYiw67VeGkPvmM3fi65H9KxDgCf79fNwspcD3ycubK"
+  }
+]

@@ -1,0 +1,15 @@
+[package]
+name = "mangol-solana"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+solana-client = "1.10.26"
+solana-program = "1.10.26"
+solana-sdk = "1.10.26"
+solana-account-decoder = "1.10.26"
+itertools = "0.10.3"
+reqwest = "0.11.11"
+serde = "1.0.137"
+
+mangol-common = { path = "../common"}

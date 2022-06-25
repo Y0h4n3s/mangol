@@ -1,0 +1,10 @@
+[package]
+name = "mangol-common"
+version = "3.0.0"
+edition = "2018"
+
+[dependencies]
+solana-program = ">=1.9.0"
+solana-client = "1.10.26"
+thiserror = "1.0.31"
+bytemuck = "^1.7.2"
