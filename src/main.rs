@@ -29,7 +29,7 @@ fn main() -> MangolResult<()> {
 	let mango_client = MangoClient::new(&connection, decoded_mango_group, mango_mainnet_group, mango_account, decoded_mango_group.mango_cache.clone(), decoded_mango_account, decoded_mango_cache, mango_program, signer)?;
 	let perp_markets = serde_json::from_str::<Vec<PerpMarketData>>(&std::fs::read_to_string("./files/perpMarkets.json").unwrap()).unwrap();
 	let perp_market = perp_markets.get(3).unwrap();
-	let mut fib_trader = FibStrat::new(10, 13, mango_client, PriceSide::Buy, perp_market.clone())?;
+	let mut fib_trader = FibStrat::new(10, 13, mango_client, PriceSide::Sell, perp_market.clone())?;
 	
 	fib_trader.init_position()?;
 	fib_trader.start_trading()?;
