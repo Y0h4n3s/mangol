@@ -9,6 +9,9 @@ use num_traits::pow::Pow;
 use solana_sdk::pubkey::Pubkey;
 use std::time::Duration;
 use colored::Colorize;
+use solana_sdk::signature::Signature;
+use std::str::FromStr;
+use solana_transaction_status::UiTransactionEncoding;
 
 #[derive(Copy, Clone, Debug)]
 pub enum PriceSide {
@@ -318,7 +321,6 @@ impl FibStrat {
 		let curr_position_size = self.get_position_size()?;
 		let oracle_price = self.mango_client.mango_cache.get_price(self.market.market_index);
 		
-		
 		let mut previous_state = self.position.current_state.clone();
 		
 		match &mut previous_state {
@@ -515,8 +517,7 @@ impl FibStrat {
 	pub fn start_trading(&mut self) -> MangolResult<()> {
 		'trading_loop: loop {
 			// sleep every iteration and make decisions after
-			println!("Sleeping for {} secs", self.action_interval_secs);
-			std::thread::sleep(Duration::from_secs(self.action_interval_secs));
+			
 			let perp_account: PerpAccount = self.mango_client.mango_account.perp_accounts[self.market.market_index];
 			let curr_position_size = self.get_position_size()?;
 			
@@ -525,6 +526,25 @@ impl FibStrat {
 				println!("Position in neutral state, resetting... {:?} {:?}", perp_account, self.position);
 				self.reset()?;
 				continue;
+			}
+			let mut should_not_sleep = false;
+			// check if order is on book and sleep
+			match &self.position.current_state {
+				FibStratPositionState::Selling(order) | FibStratPositionState::Buying(order) => {
+					let order_tx = self.mango_client.solana_connection.rpc_client.get_transaction(&Signature::from_str(&order.tx_hash.as_ref().unwrap()).unwrap(), UiTransactionEncoding::Json )?;
+					for message in order_tx.transaction.meta.unwrap().log_messages.unwrap() {
+						if message.contains("not be placed due to PostOnly") {
+							should_not_sleep = true;
+						}
+					}
+				}
+				_ => {}
+			}
+			
+			if !should_not_sleep {
+				
+				println!("Sleeping for {} secs", self.action_interval_secs);
+				std::thread::sleep(Duration::from_secs(self.action_interval_secs));
 			}
 			let mut previous_state = self.position.current_state.clone();
 			
