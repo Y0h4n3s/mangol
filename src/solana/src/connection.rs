@@ -106,8 +106,8 @@ impl SolanaConnection {
 	}
 	
 	pub fn try_tx_once(&self, transaction: Transaction) -> MangolResult<String> {
-		const SEND_RETRIES: usize = 5;
-		const GET_STATUS_RETRIES: usize = 55;
+		const SEND_RETRIES: usize = 15;
+		const GET_STATUS_RETRIES: usize = 155;
 		let now = Instant::now();
 		'sending: for _ in 0..SEND_RETRIES {
 			let sig = self.rpc_client.send_transaction(&transaction);

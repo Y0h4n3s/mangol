@@ -11,6 +11,7 @@ solana-account-decoder = "1.10.26"
 solana-sdk = "1.10.26"
 base64 = "0.20.0-alpha.1"
 itertools = "0.10.3"
+colored = "2.0.0"
 mangol-mango = { path = "../mango"}
 mangol-solana = { path = "../solana"}
 mangol-mailer = { path = "../mailer"}

@@ -8,13 +8,15 @@ use mangol_mango::types::{OrderType, PerpAccount, PerpMarket, PerpMarketData, Pe
 use num_traits::pow::Pow;
 use solana_sdk::pubkey::Pubkey;
 use std::time::Duration;
+use colored::Colorize;
+
 #[derive(Copy, Clone, Debug)]
 pub enum PriceSide {
 	Sell,
 	Buy
 }
 
-#[derive(Copy, Clone, Debug)]
+#[derive(Copy, Clone, Debug, PartialEq)]
 pub enum FibStratOrderState {
 	Filled,
 	PartiallyFilled,
@@ -22,7 +24,7 @@ pub enum FibStratOrderState {
 	Initial
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct FibStratOrder {
 	depth: u16,
 	state: FibStratOrderState,
@@ -32,10 +34,11 @@ pub struct FibStratOrder {
 	
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub enum FibStratPositionState {
 	Selling(FibStratOrder),
-	Buying(FibStratOrder)
+	Buying(FibStratOrder),
+	Neutral
 }
 #[derive( Clone, Debug)]
 pub struct FibStratPosition {
@@ -102,6 +105,7 @@ impl FibStrat {
 	}
 	
 	pub fn init_position(&mut self) -> MangolResult<bool> {
+		self.mango_client.update();
 		let oracle_price = self.mango_client.mango_cache.get_price(self.market.market_index);
 		let perp_market: PerpMarketInfo = self.mango_client.mango_group.perp_markets.get(self.market.market_index as usize).unwrap().clone();
 		let quantity = self.market.ui_to_quote_units(fib_calculator::get_quantity_at_n(1, TRADE_AMOUNT)?) / self.mango_client.mango_group.perp_markets[self.market.market_index].quote_lot_size as f64;
@@ -130,13 +134,14 @@ impl FibStrat {
 				// calculate next price target and size
 				let target_price = fib_calculator::get_price_at_n(1, oracle_price, -1)?;
 				let next_quantity = self.market.ui_to_quote_units(fib_calculator::get_quantity_at_n(1, TRADE_AMOUNT)?)/ self.mango_client.mango_group.perp_markets[self.market.market_index].quote_lot_size as f64;;
+				
 				let next_order_hash = self.mango_client.place_perp_order(
 					&perp_market,
 					&self.market,
 					Side::Bid,
 					target_price,
 					next_quantity.round().to_string().parse::<i64>().unwrap(),
-					OrderType::Limit,
+					OrderType::PostOnly,
 					true,
 					Some(self.action_interval_secs as u64 - 1)
 				)?;
@@ -157,13 +162,15 @@ impl FibStrat {
 					oracle_price,
 					quantity.round().to_string().parse::<i64>().unwrap(),
 					OrderType::Market,
-					false,
+					true,
 					None
 				)?;
 				order.tx_hash = Some(order_hash);
 				order.price = oracle_price;
 			}
+			_ => {}
 		}
+		
 		Ok(true)
 	}
 	
@@ -181,6 +188,8 @@ impl FibStrat {
 					position_size = position_size + order.base_size as f64
 					
 				}
+				_ => {}
+				
 			}
 		}
 		
@@ -191,16 +200,18 @@ impl FibStrat {
 		}
 	}
 	
-	pub fn get_position_size(&self) -> MangolResult<f64> {
-		let mut position_size: f64 = 0.0;
+	pub fn get_position_size(&self) -> MangolResult<i64> {
+		let mut position_size: i64 = 0;
 		for past_state in &self.position.state_history {
 			match past_state {
 				FibStratPositionState::Selling(order) => {
-					position_size = position_size - order.base_size as f64
+					position_size = position_size - order.base_size as i64
 				}
 				FibStratPositionState::Buying(order) => {
-					position_size = position_size + order.base_size as f64
+					position_size = position_size + order.base_size as i64
 				}
+				_ => {}
+				
 			}
 		}
 		Ok(position_size.abs())
@@ -208,7 +219,40 @@ impl FibStrat {
 	}
 	
 	pub fn reset(&mut self) -> MangolResult<()> {
+		self.mango_client.update()?;
+		let perp_account: PerpAccount = self.mango_client.mango_account.perp_accounts[self.market.market_index];
+		let perp_market: PerpMarketInfo = self.mango_client.mango_group.perp_markets.get(self.market.market_index as usize).unwrap().clone();
 		
+		let oracle_price = self.mango_client.mango_cache.get_price(self.market.market_index);
+		
+		if perp_account.base_position > 0 {
+			// sell and return to 0
+			let order_hash = self.mango_client.place_perp_order_with_base(
+				&perp_market,
+				&self.market,
+				Side::Bid,
+				oracle_price,
+				perp_account.base_position,
+				OrderType::Market,
+				true,
+				None
+			)?;
+			println!("Neutralized position")
+		} else if perp_account.base_position < 0 {
+			// sentiment buy handle here
+			let order_hash = self.mango_client.place_perp_order_with_base(
+				&perp_market,
+				&self.market,
+				Side::Ask,
+				oracle_price,
+				perp_account.base_position.abs(),
+				OrderType::Market,
+				true,
+				None
+			)?;
+			println!("Neutralized position")
+			
+		}
 		// TODO: store previous position state somewhere for analysis
 		let current_state = match self.sentiment {
 			PriceSide::Sell => {
@@ -249,7 +293,7 @@ impl FibStrat {
 			}
 			
 		} else {
-			trade_quantity =  self.get_quantity_lots_at_n(depth)?;
+			trade_quantity =  self.get_quantity_lots_at_n(max(1, depth))?;
 		}
 		
 		Ok(trade_quantity)
@@ -260,6 +304,9 @@ impl FibStrat {
 	}
 	
 	pub fn sync_bearish(&mut self) -> MangolResult<()> {
+		println!("{}", format!("\n>>>>>>> Bearish Sync <<<<<<<<").yellow());
+		
+		
 		// sync onchain state
 		let prev_perp_market_info: &PerpMarketInfo = self.mango_client.mango_group.perp_markets.get(self.market.market_index as usize).unwrap();
 		let prev_perp_account: PerpAccount = self.mango_client.mango_account.perp_accounts[self.market.market_index];
@@ -269,6 +316,7 @@ impl FibStrat {
 		let curr_perp_account: PerpAccount = self.mango_client.mango_account.perp_accounts[self.market.market_index];
 		let curr_mango_cache = self.mango_client.mango_cache.clone();
 		let curr_position_size = self.get_position_size()?;
+		let oracle_price = self.mango_client.mango_cache.get_price(self.market.market_index);
 		
 		let mut previous_state = self.position.current_state.clone();
 		
@@ -279,13 +327,28 @@ impl FibStrat {
 				let expected_base_filled = trade_quantity / native_price;
 				let actual_base_filled = (prev_perp_account.base_position - curr_perp_account.base_position).abs();
 				println!("Previous state SELLING Expected to be filled: {} Actual filled: {}", expected_base_filled, actual_base_filled);
+				println!();
 				if actual_base_filled == 0 {
 					// order was not filled
 				}
-				else if expected_base_filled > actual_base_filled {
+				else if expected_base_filled > actual_base_filled   {
 					// handle partially filled order here
 					// save it to a partially filled list and do sth
-					mangol_mailer::send_text_with_content(format!("Partial fill encountered idk what to do reset me rn {:?}", &self.position));
+					mangol_mailer::send_text_with_content(format!("Buying back partial fill of {}", actual_base_filled));
+					let order_hash = self.mango_client.place_perp_order_with_base(
+						curr_perp_market_info,
+						&self.market,
+						Side::Bid,
+						oracle_price,
+						actual_base_filled,
+						OrderType::Market,
+						false,
+						None
+					)?;
+					let message = format!("Bought back {} https://explorer.solana.com/tx/{}", actual_base_filled, order_hash);
+					mangol_mailer::send_text_with_content(message.clone());
+					println!("{}", message);
+					
 				}
 				
 				else if expected_base_filled <= actual_base_filled {
@@ -307,10 +370,24 @@ impl FibStrat {
 				if actual_base_filled == 0 {
 					// order was not filled
 				}
-				else if expected_base_filled > actual_base_filled {
+				else if expected_base_filled > actual_base_filled  {
 					// handle partially filled order here
 					// save it to a partially filled list and do sth
-					mangol_mailer::send_text_with_content(format!("Partial fill encountered reset me rn {:?}", &self.position));
+					mangol_mailer::send_text_with_content(format!("Selling back partial fill of {}", actual_base_filled));
+					let order_hash = self.mango_client.place_perp_order_with_base(
+						curr_perp_market_info,
+						&self.market,
+						Side::Ask,
+						oracle_price,
+						actual_base_filled,
+						OrderType::Market,
+						false,
+						None
+					)?;
+					let message = format!("Bought back {} https://explorer.solana.com/tx/{}", actual_base_filled, order_hash);
+					mangol_mailer::send_text_with_content(message.clone());
+					println!("{}", message);
+					
 				}
 				else if expected_base_filled <= actual_base_filled {
 					// order was succesful
@@ -318,11 +395,17 @@ impl FibStrat {
 					// therefore adjust depth to reflect current position size for the decision round
 					order.base_size = actual_base_filled as u64;
 					order.state = FibStratOrderState::Filled;
-					order.depth = if order.depth > RISK_TOLERANCE { order.depth - RISK_TOLERANCE} else if order.depth >= 1 {order.depth - 1} else {0};
+					order.depth = if order.depth > RISK_TOLERANCE { order.depth - RISK_TOLERANCE} else if order.depth > 1 {order.depth - 1} else {
+						println!("Last order for position filled, setting to Neutral state");
+						self.position.current_state = FibStratPositionState::Neutral;
+						1
+					};
 					
 					self.position.state_history.push(previous_state.clone());
 				}
 			}
+			_ => {}
+			
 		}
 		Ok(())
 		
@@ -334,13 +417,13 @@ impl FibStrat {
 	}
 		
 		pub fn decide_bearish(&mut self) -> MangolResult<()> {
-		
+			println!("{}", format!("\n>>>>>>> Bearish Decision <<<<<<<<").green());
 		let mango_cache = self.mango_client.mango_cache.clone();
 		let perp_market_info: &PerpMarketInfo = self.mango_client.mango_group.perp_markets.get(self.market.market_index as usize).unwrap();
 		
 		let average_price = self.get_average_price()?;
 		let curr_position_size = self.get_position_size()?;
-		if curr_position_size == 0.0 {
+		if curr_position_size == 0 {
 			// position is closed reset on next iteration
 			return Ok(())
 		}
@@ -348,21 +431,23 @@ impl FibStrat {
 		println!("Using average price: {} oracle price: {} and position size: {}", average_price, oracle_price, curr_position_size);
 		
 		let last_committed_state = self.position.state_history.get(self.position.state_history.len() - 1).unwrap();
-		println!("Last Known state: {:?}", last_committed_state);
+		///println!("Last Known state: {:?}", last_committed_state);
 		if oracle_price > average_price {
 			match last_committed_state {
 				FibStratPositionState::Selling(order) | FibStratPositionState::Buying(order) => {
 					// calculate next price target and size
-					let target_price = fib_calculator::get_price_at_n(order.depth + 1, average_price, 1)?;
+					let mut target_price = fib_calculator::get_price_at_n(order.depth + 1, average_price, 1)?;
 					let next_quantity = self.get_quantity_lots_at_n(order.depth + 1)?;
-					
+					if target_price < oracle_price {
+						target_price = fib_calculator::get_price_at_n( 1, oracle_price, 1)?;
+					}
 					let next_order_hash = self.mango_client.place_perp_order(
 						perp_market_info,
 						&self.market,
 						Side::Ask,
 						target_price,
 						next_quantity,
-						OrderType::Limit,
+						OrderType::PostOnly,
 						order.depth == 0,
 						Some(self.action_interval_secs as u64)
 					)?;
@@ -374,14 +459,24 @@ impl FibStrat {
 						base_size: 0
 					});
 				}
-
+				_ => {}
+				
+				
 			}
 		} else {
 			match last_committed_state {
 				FibStratPositionState::Selling(order) | FibStratPositionState::Buying(order) => {
 					
 					// calculate next price target and size
-					let target_price = fib_calculator::get_price_at_n(1, average_price, -1)?;
+					let target_price_depth = if order.depth > RISK_TOLERANCE {
+						1
+					} else {
+						order.depth
+					};
+					let mut target_price = fib_calculator::get_price_at_n(1, average_price, -1)?;
+					if target_price > oracle_price {
+						target_price = fib_calculator::get_price_at_n(1, oracle_price, -1)?;
+					}
 					let next_quantity = self.get_profit_size_at_n(order.depth)?;
 					let next_order_hash = self.mango_client.place_perp_order(
 						perp_market_info,
@@ -389,8 +484,8 @@ impl FibStrat {
 						Side::Bid,
 						target_price,
 						next_quantity,
-						OrderType::Limit,
-						order.depth == 0,
+						OrderType::PostOnly,
+						order.depth == 1,
 						Some(self.action_interval_secs as u64)
 					)?;
 					self.position.current_state = FibStratPositionState::Buying(FibStratOrder {
@@ -401,6 +496,7 @@ impl FibStrat {
 						base_size: 0
 					});
 				}
+				_ => {}
 				
 			}
 		}
@@ -412,7 +508,6 @@ impl FibStrat {
 		Ok(())
 	}
 	pub fn start_trading(&mut self) -> MangolResult<()> {
-
 		'trading_loop: loop {
 			// sleep every iteration and make decisions after
 			println!("Sleeping for {} secs", self.action_interval_secs);
@@ -420,13 +515,12 @@ impl FibStrat {
 			let perp_account: PerpAccount = self.mango_client.mango_account.perp_accounts[self.market.market_index];
 			let curr_position_size = self.get_position_size()?;
 			
-			if perp_account.base_position == 0  || curr_position_size == 0.0 {
+			if self.position.current_state == FibStratPositionState::Neutral {
 				// The position has been closed, reset
-				println!("Position in neutral state, resetting... {:?}", perp_account);
+				println!("Position in neutral state, resetting... {:?} {:?}", perp_account, self.position);
 				self.reset()?;
 				continue;
 			}
-			
 			let mut previous_state = self.position.current_state.clone();
 			
 			

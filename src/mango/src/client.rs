@@ -6,6 +6,7 @@ use solana_sdk::transaction::Transaction;
 use std::str::FromStr;
 use std::time::{Instant, SystemTime, UNIX_EPOCH};
 use solana_program::clock::UnixTimestamp;
+use solana_sdk::commitment_config::CommitmentConfig;
 use crate::types::{OrderType, PerpMarketData, Side, MangoGroup, MangoCache, MangoAccount, ExpiryType, PerpMarketInfo};
 use solana_sdk::signature::Signer;
 use crate::types::PerpMarket;
@@ -39,22 +40,21 @@ impl MangoClient {
 	}
 	
 	pub fn update(&mut self) -> MangolResult<()> {
-		let mango_account_info = self.solana_connection.rpc_client.get_account(&self.mango_account_pk).unwrap();
+		let mango_account_info = self.solana_connection.rpc_client.get_account_with_commitment(&self.mango_account_pk, CommitmentConfig::processed()).unwrap().value.unwrap();
 		self.mango_account = MangoAccount::load_checked(mango_account_info, &self.mango_program_id).unwrap();
 		
-		let mango_group_account_info = self.solana_connection.rpc_client.get_account(&self.mango_group_pk).unwrap();
+		let mango_group_account_info = self.solana_connection.rpc_client.get_account_with_commitment(&self.mango_group_pk, CommitmentConfig::processed()).unwrap().value.unwrap();
 		self.mango_group = MangoGroup::load_checked(mango_group_account_info, &self.mango_program_id).unwrap();
-		let mango_cache_account_info = self.solana_connection.rpc_client.get_account(&self.mango_cache_pk)?;
+		let mango_cache_account_info = self.solana_connection.rpc_client.get_account_with_commitment(&self.mango_cache_pk, CommitmentConfig::processed())?.value.unwrap();
 		self.mango_cache = MangoCache::load_checked(mango_cache_account_info, &self.mango_program_id, &self.mango_group).unwrap();
 		Ok(())
 	}
 	
 	pub fn place_perp_order(&self, perp_market: &PerpMarketInfo, perp_market_data: &PerpMarketData, side: Side, price: f64, quantity: i64, order_type: OrderType, reduce_only: bool, expiry_timestamp: Option<u64>) -> MangolResult<String> {
-		println!("{} {}", price, quantity);
 		let (native_price, native_quantity) = perp_market.lotToNativePriceQuantity(price, quantity.try_into().unwrap());
-		println!("{} {} {}", native_price, native_quantity, quantity / native_price);
+		println!("Order price: {} Order quantity: {}", price, quantity / native_price);
 		let mut expires_at = None;
-		if (expiry_timestamp.is_some()) {
+		if expiry_timestamp.is_some() {
 			expires_at = Some(SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs() + expiry_timestamp.unwrap());
 		}
 		let instruction = crate::instructions::place_perp_order2(
@@ -73,6 +73,42 @@ impl MangoClient {
 			native_price,
 			quantity / native_price,
 			quantity,
+			0,
+			order_type,
+			reduce_only,
+			expires_at,
+			10,
+			ExpiryType::Relative).unwrap();
+		let recent_blockhash = self.solana_connection.rpc_client.get_latest_blockhash().unwrap();
+		let transaction = Transaction::new_signed_with_payer(&[instruction], Some(&self.signer.pubkey()), &[&self.signer], recent_blockhash);
+		self.solana_connection.try_tx_once(transaction)
+		
+	}
+	
+
+	
+	pub fn place_perp_order_with_base(&self, perp_market: &PerpMarketInfo, perp_market_data: &PerpMarketData, side: Side, price: f64, quantity: i64, order_type: OrderType, reduce_only: bool, expiry_timestamp: Option<u64>) -> MangolResult<String> {
+		let (native_price, native_quantity) = perp_market.lotToNativePriceQuantity(price, quantity.try_into().unwrap());
+		let mut expires_at = None;
+		if (expiry_timestamp.is_some()) {
+			expires_at = Some(SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs() + expiry_timestamp.unwrap());
+		}
+		let instruction = crate::instructions::place_perp_order2(
+			&self.mango_program_id,
+			&self.mango_group_pk,
+			&self.mango_account_pk,
+			&self.mango_account.owner,
+			&self.mango_cache_pk,
+			&Pubkey::from_str(&perp_market_data.pubkey).unwrap(),
+			&Pubkey::from_str(&perp_market_data.bids_key.clone()).unwrap(),
+			&Pubkey::from_str(&perp_market_data.asks_key.clone()).unwrap(),
+			&Pubkey::from_str(&perp_market_data.events_key.clone()).unwrap(),
+			None,
+			&self.mango_account.spot_open_orders,
+			side,
+			native_price,
+			quantity,
+			quantity * native_price,
 			0,
 			order_type,
 			reduce_only,
