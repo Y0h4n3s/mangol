@@ -318,6 +318,7 @@ impl FibStrat {
 		let curr_position_size = self.get_position_size()?;
 		let oracle_price = self.mango_client.mango_cache.get_price(self.market.market_index);
 		
+		
 		let mut previous_state = self.position.current_state.clone();
 		
 		match &mut previous_state {
@@ -371,6 +372,10 @@ impl FibStrat {
 					// order was not filled
 				}
 				else if expected_base_filled > actual_base_filled  {
+					if order.depth == 1 {
+						self.position.current_state = FibStratPositionState::Neutral;
+						return Ok(())
+					}
 					// handle partially filled order here
 					// save it to a partially filled list and do sth
 					mangol_mailer::send_text_with_content(format!("Selling back partial fill of {}", actual_base_filled));
@@ -423,7 +428,7 @@ impl FibStrat {
 		
 		let average_price = self.get_average_price()?;
 		let curr_position_size = self.get_position_size()?;
-		if curr_position_size == 0 {
+		if self.position.current_state == FibStratPositionState::Neutral {
 			// position is closed reset on next iteration
 			return Ok(())
 		}
