@@ -532,18 +532,21 @@ impl FibStrat {
 			// check if order is on book and sleep
 			match &self.position.current_state {
 				FibStratPositionState::Selling(order) | FibStratPositionState::Buying(order) => {
-					let mut fetch_tries = 10;
-					while fetch_tries > 0 {
-						if let Ok(order_tx) = self.mango_client.solana_connection.rpc_client.get_transaction(&Signature::from_str(&order.tx_hash.as_ref().unwrap()).unwrap(), UiTransactionEncoding::Base64 ) {
-							fetch_tries = 0;
-							for message in order_tx.transaction.meta.unwrap().log_messages.unwrap() {
-								if message.contains("not be placed due to PostOnly") {
-									should_not_sleep = true;
+					if order.tx_hash.is_some() {
+						let mut fetch_tries = 10;
+						while fetch_tries > 0 {
+							if let Ok(order_tx) = self.mango_client.solana_connection.rpc_client.get_transaction(&Signature::from_str(&order.tx_hash.as_ref().unwrap()).unwrap(), UiTransactionEncoding::Base64 ) {
+								fetch_tries = 0;
+								for message in order_tx.transaction.meta.unwrap().log_messages.unwrap() {
+									if message.contains("not be placed due to PostOnly") {
+										should_not_sleep = true;
+									}
 								}
+							} else {
+								fetch_tries -= 1;
 							}
-						} else {
-							fetch_tries -= 1;
 						}
+						
 					}
 					
 					
