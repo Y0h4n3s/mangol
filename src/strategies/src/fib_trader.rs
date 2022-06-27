@@ -136,7 +136,7 @@ impl FibStrat {
 				self.position.state_history.push(self.position.current_state.clone());
 				
 				// calculate next price target and size
-				let target_price = fib_calculator::get_price_at_n(2, oracle_price, -1)?;
+				let target_price = fib_calculator::get_price_at_n(4, oracle_price, -1)?;
 				let next_quantity = self.market.ui_to_quote_units(fib_calculator::get_quantity_at_n(1, TRADE_AMOUNT)?)/ self.mango_client.mango_group.perp_markets[self.market.market_index].quote_lot_size as f64;;
 				
 				let next_order_hash = self.mango_client.place_perp_order(
