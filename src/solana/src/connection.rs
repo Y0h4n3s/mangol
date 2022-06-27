@@ -119,20 +119,32 @@ impl SolanaConnection {
 				
 				'confirmation: for status_retry in 0..usize::MAX {
 					let result: Result<Signature, Option<TransactionError>> =
-						  match self.rpc_client.get_signature_status_with_commitment(&signature,CommitmentConfig::finalized()).unwrap() {
-							  Some(Ok(_)) => Ok(signature),
-							  Some(Err(e)) => Err(Some(e.into())),
-							  None => {
-								   if status_retry < GET_STATUS_RETRIES
-								  {
-									  // Retry in a second
-									  sleep(Duration::from_millis(1000));
-									  Err(None)
-								  } else {
-									  println!("[?] Transaction not finalized in {} seconds resending", now.elapsed().as_secs());
-									  break 'confirmation;
+						  match self.rpc_client.get_signature_status_with_commitment(&signature,CommitmentConfig::finalized()) {
+							  Ok(res) => {
+								  match res {
+									  Some(Ok(_)) => Ok(signature),
+									  Some(Err(e)) => Err(Some(e.into())),
+									  None => {
+										  if status_retry < GET_STATUS_RETRIES
+										  {
+											  // Retry in a second
+											  sleep(Duration::from_millis(1000));
+											  Err(None)
+										  } else {
+											  println!("[?] Transaction not finalized in {} seconds resending", now.elapsed().as_secs());
+											  break 'confirmation;
+										  }
+									  }
 								  }
+								 
 							  }
+							  Err(e) => {
+								  eprintln!("{:?}", e);
+								  // Retry in a second
+								  sleep(Duration::from_millis(1000));
+								  Err(None)
+							  }
+							  
 						  };
 					match result {
 						Ok(signature) => {
