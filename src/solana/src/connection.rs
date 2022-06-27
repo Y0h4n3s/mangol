@@ -16,6 +16,9 @@ use solana_sdk::transaction::{Transaction, TransactionError};
 use std::time::Instant;
 use solana_sdk::signature::Signature;
 use std::thread::sleep;
+use solana_program::instruction::InstructionError as IError;
+use solana_sdk::transaction::TransactionError::InstructionError;
+
 pub struct SolanaConnection {
 	pub rpc_client: RpcClient,
 	
@@ -142,8 +145,20 @@ impl SolanaConnection {
 							continue
 						}
 						Err (e) => {
-							eprintln!("[-] Transaction Failed: {:?}", e );
-							return Err(MangolError::SolanaError(SolanaError::ProgramAccountsNotFound))
+							match e.as_ref().unwrap() {
+								TransactionError::InstructionError(0, err) => {
+									if !err.eq(&IError::Custom(33)) {
+										eprintln!("[-] Transaction Failed: {:?}", err );
+										return Err(MangolError::SolanaError(SolanaError::ProgramAccountsNotFound))
+									} else {
+										continue
+									}
+								}
+								_ => {
+									eprintln!("[-] Transaction Failed: {:?}", e );
+									return Err(MangolError::SolanaError(SolanaError::ProgramAccountsNotFound))
+								}
+							}
 							
 						}
 					}

@@ -534,10 +534,10 @@ impl FibStrat {
 					let mut fetch_tries = 10;
 					while fetch_tries > 0 {
 						if let Ok(order_tx) = self.mango_client.solana_connection.rpc_client.get_transaction(&Signature::from_str(&order.tx_hash.as_ref().unwrap()).unwrap(), UiTransactionEncoding::Base64 ) {
+							fetch_tries = 0;
 							for message in order_tx.transaction.meta.unwrap().log_messages.unwrap() {
 								if message.contains("not be placed due to PostOnly") {
 									should_not_sleep = true;
-									fetch_tries = 0;
 								}
 							}
 						} else {
