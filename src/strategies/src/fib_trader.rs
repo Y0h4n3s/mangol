@@ -1,5 +1,5 @@
 
-// https://play.rust-lang.org/?version=stable&mode=debug&edition=2021&gist=12543b0d2e4aa4592bcb42ae174aaedc
+// https://play.rust-lang.org/?version=stable&mode=debug&edition=2021&gist=32e2e59946ca35ed2b31d2272b4f7823
 use std::cmp::max;
 use mangol_common::errors::MangolResult;
 use mangol_solana::{Token, TokenMint};
@@ -63,6 +63,7 @@ const FIB_RATIO: f64 = 1.618;
 const PRICE_FIB_RATIO: f64 = 0.0618;
 const TRADE_AMOUNT: f64 = 10.0;
 const RISK_TOLERANCE: u16 = 2;
+const PROFIT_PRICE_DEPTH: u16 = 2;
 impl FibStrat {
 	pub fn new(max_position_depth: u16, action_interval_secs: u64, mango_client: MangoClient, sentiment: PriceSide, market: PerpMarketData) -> MangolResult<Self>{
 		let current_state = match sentiment {
@@ -135,7 +136,7 @@ impl FibStrat {
 				self.position.state_history.push(self.position.current_state.clone());
 				
 				// calculate next price target and size
-				let target_price = fib_calculator::get_price_at_n(1, oracle_price, -1)?;
+				let target_price = fib_calculator::get_price_at_n(2, oracle_price, -1)?;
 				let next_quantity = self.market.ui_to_quote_units(fib_calculator::get_quantity_at_n(1, TRADE_AMOUNT)?)/ self.mango_client.mango_group.perp_markets[self.market.market_index].quote_lot_size as f64;;
 				
 				let next_order_hash = self.mango_client.place_perp_order(
@@ -475,12 +476,12 @@ impl FibStrat {
 				FibStratPositionState::Selling(order) | FibStratPositionState::Buying(order) => {
 					
 					// calculate next price target and size
-					let target_price_depth = if order.depth > RISK_TOLERANCE {
+					let target_price_depth = if order.depth >= RISK_TOLERANCE {
 						1
-					} else {
-						order.depth
+					} else  {
+						RISK_TOLERANCE
 					};
-					let mut target_price = fib_calculator::get_price_at_n(1, average_price, -1)?;
+					let mut target_price = fib_calculator::get_price_at_n(target_price_depth, average_price, -1)?;
 					if target_price > oracle_price {
 						target_price = fib_calculator::get_price_at_n(1, oracle_price, -1)?;
 					}
