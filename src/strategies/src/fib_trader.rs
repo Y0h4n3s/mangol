@@ -48,6 +48,7 @@ pub struct FibStratPosition {
 	pub state_history: Vec<FibStratPositionState>,
 	pub current_state: FibStratPositionState,
 	pub max_position_depth: u16,
+	pub furthest_position: u16,
 	pub starting_position_size: f64,
 }
 pub struct FibStrat {
@@ -63,7 +64,7 @@ const FIB_RATIO: f64 = 1.618;
 const PRICE_FIB_RATIO: f64 = 0.0618;
 const TRADE_AMOUNT: f64 = 10.0;
 const RISK_TOLERANCE: u16 = 2;
-const PROFIT_PRICE_DEPTH: u16 = 2;
+const PROFIT_PRICE_DEPTH: u16 = 6;
 impl FibStrat {
 	pub fn new(max_position_depth: u16, action_interval_secs: u64, mango_client: MangoClient, sentiment: PriceSide, market: PerpMarketData) -> MangolResult<Self>{
 		let current_state = match sentiment {
@@ -91,13 +92,15 @@ impl FibStrat {
 				state_history: vec![],
 				current_state,
 				max_position_depth,
-				starting_position_size: FIB_RATIO
+				starting_position_size: FIB_RATIO,
+				furthest_position: 1
+				
 			},
 			action_interval_secs,
 			mango_client,
 			starting_sentiment: sentiment,
 			market,
-			sentiment
+			sentiment,
 		})
 	}
 	
@@ -234,7 +237,7 @@ impl FibStrat {
 			let order_hash = self.mango_client.place_perp_order_with_base(
 				&perp_market,
 				&self.market,
-				Side::Bid,
+				Side::Ask,
 				oracle_price,
 				perp_account.base_position,
 				OrderType::Market,
@@ -247,7 +250,7 @@ impl FibStrat {
 			let order_hash = self.mango_client.place_perp_order_with_base(
 				&perp_market,
 				&self.market,
-				Side::Ask,
+				Side::Bid,
 				oracle_price,
 				perp_account.base_position.abs(),
 				OrderType::Market,
@@ -282,8 +285,10 @@ impl FibStrat {
 				state_history: vec![],
 				current_state,
 				max_position_depth: self.position.max_position_depth,
-				starting_position_size: FIB_RATIO
-			};
+				starting_position_size: FIB_RATIO,
+			furthest_position: 1
+			
+		};
 		self.init_position()?;
 		
 		Ok(())
@@ -356,6 +361,9 @@ impl FibStrat {
 				}
 				
 				else if expected_base_filled <= actual_base_filled {
+					if order.depth > self.position.furthest_position {
+						self.position.furthest_position = order.depth
+					}
 					// order was succesful
 					order.base_size = actual_base_filled as u64;
 					order.state = FibStratOrderState::Filled;
@@ -398,6 +406,9 @@ impl FibStrat {
 					
 				}
 				else if expected_base_filled <= actual_base_filled {
+					if order.depth > self.position.furthest_position {
+						self.position.furthest_position = order.depth
+					}
 					// order was succesful
 					// meaning previous 1 sell order or previous n - RISK_TOLERANCE depth orders have been profited on and closed
 					// therefore adjust depth to reflect current position size for the decision round
@@ -476,10 +487,10 @@ impl FibStrat {
 				FibStratPositionState::Selling(order) | FibStratPositionState::Buying(order) => {
 					
 					// calculate next price target and size
-					let target_price_depth = if order.depth >= RISK_TOLERANCE {
+					let target_price_depth = if order.depth >= PROFIT_PRICE_DEPTH || ( order.depth == 1 && self.position.furthest_position > RISK_TOLERANCE ){
 						1
 					} else  {
-						RISK_TOLERANCE
+						PROFIT_PRICE_DEPTH - order.depth
 					};
 					let mut target_price = fib_calculator::get_price_at_n(target_price_depth, average_price, -1)?;
 					if target_price > oracle_price {
