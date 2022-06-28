@@ -357,6 +357,7 @@ impl FibStrat {
 					let message = format!("Bought back {} https://explorer.solana.com/tx/{}", actual_base_filled, order_hash);
 					mangol_mailer::send_text_with_content(message.clone());
 					println!("{}", message);
+					self.mango_client.update()?;
 					
 				}
 				
@@ -403,6 +404,7 @@ impl FibStrat {
 					let message = format!("Bought back {} https://explorer.solana.com/tx/{}", actual_base_filled, order_hash);
 					mangol_mailer::send_text_with_content(message.clone());
 					println!("{}", message);
+					self.mango_client.update()?;
 					
 				}
 				else if expected_base_filled <= actual_base_filled {
