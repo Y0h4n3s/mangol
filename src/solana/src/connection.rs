@@ -3,6 +3,8 @@ use std::time::Duration;
 use solana_client::rpc_client::{GetConfirmedSignaturesForAddress2Config, RpcClient};
 use solana_client::rpc_config::RpcProgramAccountsConfig;
 use solana_client::tpu_client::{TpuClient, TpuClientConfig};
+use solana_client::client_error::ClientErrorKind;
+use solana_client::rpc_request;
 use solana_program::pubkey::Pubkey;
 use solana_sdk::account::Account;
 use itertools::Itertools;
@@ -14,8 +16,9 @@ use solana_account_decoder::{UiAccountData, UiAccountEncoding};
 use solana_client::pubsub_client::{AccountSubscription, PubsubClientError};
 use solana_sdk::transaction::{Transaction, TransactionError};
 use std::time::Instant;
-use solana_sdk::signature::Signature;
+use solana_sdk::signature::{Keypair, Signature};
 use std::thread::sleep;
+use solana_program::hash::hash;
 use solana_program::instruction::InstructionError as IError;
 use solana_sdk::transaction::TransactionError::InstructionError;
 
@@ -108,12 +111,16 @@ impl SolanaConnection {
 		return solana_client::pubsub_client::PubsubClient::account_subscribe(ws_url, account, Some(RpcAccountInfoConfig { encoding: Some(UiAccountEncoding::JsonParsed), data_slice: None, commitment: Some(CommitmentConfig::finalized()), min_context_slot: None }));
 	}
 	
-	pub fn try_tx_once(&self, transaction: Transaction) -> MangolResult<String> {
+	pub fn try_tx_once(&self, transaction: Transaction, signer: &Keypair) -> MangolResult<String> {
 		const SEND_RETRIES: usize = 15;
 		const GET_STATUS_RETRIES: usize = 155;
 		let now = Instant::now();
+		let recent_blockhash = self.rpc_client.get_latest_blockhash().unwrap();
+		
+		let mut signed_transaction = transaction.clone();
+		signed_transaction.sign(&[signer], recent_blockhash);
 		'sending: for _ in 0..SEND_RETRIES {
-			let sig = self.rpc_client.send_transaction(&transaction);
+			let sig = self.rpc_client.send_transaction(&signed_transaction);
 			if let Ok(signature) = sig {
 				
 				
@@ -176,7 +183,32 @@ impl SolanaConnection {
 					}
 				}
 			} else {
-				eprintln!("[-] An Error Occurred While sending tx: {:?}", sig.unwrap_err() );
+				let err = sig.unwrap_err();
+				eprintln!("[-] An Error Occurred While sending tx: {:?}", &err );
+				match &err.kind {
+					ClientErrorKind::RpcError(e) => {
+						match e {
+							rpc_request::RpcError::RpcResponseError {
+								code,
+								..
+							} => {
+								if *code == -32002 {
+									// update blockhash
+									let recent_blockhash = self.rpc_client.get_latest_blockhash().unwrap();
+									signed_transaction = transaction.clone();
+									signed_transaction.sign(&[signer], recent_blockhash);
+									
+								}
+							}
+							_ => {
+							
+							}
+						}
+					}
+					_ => {
+					
+					}
+				}
 				continue
 			}
 		}

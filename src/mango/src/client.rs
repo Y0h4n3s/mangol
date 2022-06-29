@@ -80,8 +80,8 @@ impl MangoClient {
 			10,
 			ExpiryType::Absolute).unwrap();
 		let recent_blockhash = self.solana_connection.rpc_client.get_latest_blockhash().unwrap();
-		let transaction = Transaction::new_signed_with_payer(&[instruction], Some(&self.signer.pubkey()), &[&self.signer], recent_blockhash);
-		self.solana_connection.try_tx_once(transaction)
+		let mut transaction = Transaction::new_with_payer(&[instruction], Some(&self.signer.pubkey()));
+		self.solana_connection.try_tx_once(transaction, &self.signer)
 		
 	}
 	
@@ -116,8 +116,8 @@ impl MangoClient {
 			10,
 			ExpiryType::Absolute).unwrap();
 		let recent_blockhash = self.solana_connection.rpc_client.get_latest_blockhash().unwrap();
-		let transaction = Transaction::new_signed_with_payer(&[instruction], Some(&self.signer.pubkey()), &[&self.signer], recent_blockhash);
-		self.solana_connection.try_tx_once(transaction)
+		let mut transaction = Transaction::new_with_payer(&[instruction], Some(&self.signer.pubkey()));
+		self.solana_connection.try_tx_once(transaction, &self.signer)
 		
 	}
 	
