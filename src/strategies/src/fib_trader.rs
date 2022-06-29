@@ -64,7 +64,7 @@ pub struct FibStrat {
 }
 
 const FIB_RATIO: f64 = 1.618;
-const PRICE_FIB_RATIO: f64 = 0.0618;
+const PRICE_FIB_RATIO: f64 = 0.1618;
 const TRADE_AMOUNT: f64 = 10.0;
 const RISK_TOLERANCE: u16 = 2;
 const PROFIT_PRICE_DEPTH: u16 = 6;
@@ -579,7 +579,7 @@ impl FibStrat {
 						println!("Sleep time ended");
 						break 'sleep
 					}
-					let mango_account_info_result = self.mango_client.solana_connection.rpc_client.get_account_with_commitment(&self.mango_client.mango_account_pk, CommitmentConfig::processed());
+					let mango_account_info_result = self.mango_client.solana_connection.rpc_client.get_account_with_commitment(&self.mango_client.mango_account_pk, CommitmentConfig::finalized());
 					if let Ok(mango_account_info) = mango_account_info_result {
 						if mango_account_info.value.is_some() {
 							let mango_account = MangoAccount::load_checked(mango_account_info.value.unwrap(), &self.mango_client.mango_program_id).unwrap();

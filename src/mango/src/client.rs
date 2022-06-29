@@ -79,8 +79,17 @@ impl MangoClient {
 			expires_at,
 			10,
 			ExpiryType::Absolute).unwrap();
-		let recent_blockhash = self.solana_connection.rpc_client.get_latest_blockhash().unwrap();
-		let mut transaction = Transaction::new_with_payer(&[instruction], Some(&self.signer.pubkey()));
+		let mut mango_accounts_to_consume_events = [self.mango_account_pk.clone()];
+		let consume_instruction = crate::instructions::consume_events(
+			&self.mango_program_id,
+			&self.mango_group_pk,
+			&self.mango_cache_pk,
+			&Pubkey::from_str(&perp_market_data.pubkey).unwrap(),
+			&Pubkey::from_str(&perp_market_data.events_key.clone()).unwrap(),
+			&mut mango_accounts_to_consume_events,
+			4
+		).unwrap();
+		let mut transaction = Transaction::new_with_payer(&[instruction, consume_instruction], Some(&self.signer.pubkey()));
 		self.solana_connection.try_tx_once(transaction, &self.signer)
 		
 	}
@@ -115,8 +124,18 @@ impl MangoClient {
 			expires_at,
 			10,
 			ExpiryType::Absolute).unwrap();
-		let recent_blockhash = self.solana_connection.rpc_client.get_latest_blockhash().unwrap();
-		let mut transaction = Transaction::new_with_payer(&[instruction], Some(&self.signer.pubkey()));
+		let mut mango_accounts_to_consume_events = [self.mango_account_pk.clone()];
+		
+		let consume_instruction = crate::instructions::consume_events(
+			&self.mango_program_id,
+			&self.mango_group_pk,
+			&self.mango_cache_pk,
+			&Pubkey::from_str(&perp_market_data.pubkey).unwrap(),
+			&Pubkey::from_str(&perp_market_data.events_key.clone()).unwrap(),
+			&mut mango_accounts_to_consume_events,
+			4
+		).unwrap();
+		let mut transaction = Transaction::new_with_payer(&[instruction, consume_instruction], Some(&self.signer.pubkey()));
 		self.solana_connection.try_tx_once(transaction, &self.signer)
 		
 	}
