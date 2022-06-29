@@ -5,15 +5,17 @@ use std::cmp::max;
 use mangol_common::errors::MangolResult;
 use mangol_solana::{Token, TokenMint};
 use mangol_mango::client::MangoClient;
-use mangol_mango::types::{OrderType, PerpAccount, PerpMarket, PerpMarketData, PerpMarketInfo, Side};
+use mangol_mango::types::{OrderType, PerpAccount, PerpMarket, PerpMarketData, PerpMarketInfo, Side, MangoAccount};
 use num_traits::pow::Pow;
 use solana_sdk::pubkey::Pubkey;
 use std::time::Duration;
 use colored::Colorize;
 use solana_sdk::signature::Signature;
+use std::time::Instant;
 use std::str::FromStr;
-use solana_transaction_status::UiTransactionEncoding;
-
+	use std::thread::sleep;
+	use solana_transaction_status::UiTransactionEncoding;
+	use solana_sdk::commitment_config::CommitmentConfig;
 #[derive(Copy, Clone, Debug)]
 pub enum PriceSide {
 	Sell,
@@ -569,9 +571,30 @@ impl FibStrat {
 			}
 			
 			if !should_not_sleep {
-				
+				let sleep_start = Instant::now();
 				println!("Sleeping for {} secs", self.action_interval_secs);
-				std::thread::sleep(Duration::from_secs(self.action_interval_secs));
+				'sleep: loop {
+					let elapsed_secs = sleep_start.elapsed().as_secs();
+					if elapsed_secs > self.action_interval_secs {
+						println!("Sleep time ended");
+						break 'sleep
+					}
+					let mango_account_info_result = self.mango_client.solana_connection.rpc_client.get_account_with_commitment(&self.mango_client.mango_account_pk, CommitmentConfig::processed());
+					if let Ok(mango_account_info) = mango_account_info_result {
+						if mango_account_info.value.is_some() {
+							let mango_account = MangoAccount::load_checked(mango_account_info.value.unwrap(), &self.mango_client.mango_program_id).unwrap();
+							let perp_account = mango_account.perp_accounts[self.market.market_index];
+							if perp_account.asks_quantity == 0 && perp_account.bids_quantity == 0 {
+								println!("Order is filled or expired aborting sleep");
+								break 'sleep;
+							}
+						}
+						
+					}
+					std::thread::sleep(Duration::from_secs(1))
+					
+				}
+				
 			}
 			let mut previous_state = self.position.current_state.clone();
 			
