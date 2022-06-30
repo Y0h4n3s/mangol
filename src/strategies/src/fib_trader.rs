@@ -138,7 +138,10 @@ impl FibStrat {
 				order.state = FibStratOrderState::Filled;
 				self.mango_client.update()?;
 				let perp_account_after: PerpAccount = self.mango_client.mango_account.perp_accounts[self.market.market_index];
-				order.base_size = (perp_account.base_position - perp_account_after.base_position).abs() as u64;
+				let trade_quantity = (self.market.ui_to_quote_units(fib_calculator::get_quantity_at_n( 1, TRADE_AMOUNT)?)/ self.mango_client.mango_group.perp_markets[self.market.market_index].quote_lot_size as f64).round().to_string().parse::<i64>().unwrap();
+				let native_price = perp_market.lot_to_native_price(oracle_price);
+				order.base_size = (trade_quantity / native_price) as u64;
+				//order.base_size = (perp_account.base_position - perp_account_after.base_position).abs() as u64;
 				self.position.state_history.push(self.position.current_state.clone());
 				
 				// calculate next price target and size
@@ -612,12 +615,10 @@ impl FibStrat {
 							println!("Asks: {} Bids: {} TAsks: {} TBids: {} Orders: {:?}", perp_account.asks_quantity, perp_account.bids_quantity, perp_account.taker_base, perp_account.taker_quote, mango_account.orders);
 							if perp_account.taker_base == 0 && perp_account.taker_quote == 0 && perp_account.asks_quantity == 0 && perp_account.bids_quantity == 0 && !mango_account.orders.iter().any(|order| *order != 0_i128){
 								sure_count += 1;
-								
 							} else {
 								sure_count = 0;
 							}
 						}
-						
 					}
 					if sure_count > 5 {
 						println!("Order is filled or expired aborting sleep");
