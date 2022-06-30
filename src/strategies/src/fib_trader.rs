@@ -472,7 +472,7 @@ impl FibStrat {
 			return Ok(())
 		}
 		let oracle_price = mango_cache.get_price(self.market.market_index);
-		println!("Using average price: {} oracle price: {} and position size: {}", average_price, oracle_price, curr_position_size);
+		println!("Using average price: {} oracle price: {} and position size: {}", average_price * 1000.0, oracle_price * 1000.0, curr_position_size);
 		
 		let last_committed_state = self.position.state_history.get(self.position.state_history.len() - 1).unwrap();
 		///println!("Last Known state: {:?}", last_committed_state);
@@ -608,7 +608,7 @@ impl FibStrat {
 						if mango_account_info.value.is_some() {
 							let mango_account = MangoAccount::load_checked(mango_account_info.value.unwrap(), &self.mango_client.mango_program_id).unwrap();
 							let perp_account = mango_account.perp_accounts[self.market.market_index];
-							println!("Asks: {} Bids: {} TAsks: {} TBids: {} Orders: {:?}", perp_account.asks_quantity, perp_account.bids_quantity, perp_account.taker_base, perp_account.taker.quote, mango_account.orders);
+							println!("Asks: {} Bids: {} TAsks: {} TBids: {} Orders: {:?}", perp_account.asks_quantity, perp_account.bids_quantity, perp_account.taker_base, perp_account.taker_quote, mango_account.orders);
 							if perp_account.taker_base == 0 && perp_account.taker_quote == 0 && perp_account.asks_quantity == 0 && perp_account.bids_quantity == 0 && !mango_account.orders.iter().any(|order| *order != 0_i128){
 								
 								println!("Order is filled or expired aborting sleep");

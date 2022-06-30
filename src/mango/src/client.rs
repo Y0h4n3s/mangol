@@ -52,7 +52,7 @@ impl MangoClient {
 	
 	pub fn place_perp_order(&self, perp_market: &PerpMarketInfo, perp_market_data: &PerpMarketData, side: Side, price: f64, quantity: i64, order_type: OrderType, reduce_only: bool, expiry_timestamp: Option<u64>) -> MangolResult<String> {
 		let (native_price, native_quantity) = perp_market.lotToNativePriceQuantity(price, quantity.try_into().unwrap());
-		println!("Order price: {} Order quantity: {}", price * 100, quantity * 100 / native_price);
+		println!("Order price: {} Order quantity: {}", price * 1000.0, quantity / native_price);
 		let mut expires_at = None;
 		if expiry_timestamp.is_some() {
 			expires_at = Some(SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs() + expiry_timestamp.unwrap());
@@ -79,17 +79,17 @@ impl MangoClient {
 			expires_at,
 			10,
 			ExpiryType::Absolute).unwrap();
-		let mut mango_accounts_to_consume_events = [self.mango_account_pk.clone()];
-		let consume_instruction = crate::instructions::consume_events(
-			&self.mango_program_id,
-			&self.mango_group_pk,
-			&self.mango_group.mango_cache,
-			&Pubkey::from_str(&perp_market_data.pubkey).unwrap(),
-			&Pubkey::from_str(&perp_market_data.events_key.clone()).unwrap(),
-			&mut mango_accounts_to_consume_events,
-			4
-		).unwrap();
-		let mut transaction = Transaction::new_with_payer(&[instruction, consume_instruction], Some(&self.signer.pubkey()));
+		// let mut mango_accounts_to_consume_events = [self.mango_account_pk.clone()];
+		// let consume_instruction = crate::instructions::consume_events(
+		// 	&self.mango_program_id,
+		// 	&self.mango_group_pk,
+		// 	&self.mango_group.mango_cache,
+		// 	&Pubkey::from_str(&perp_market_data.pubkey).unwrap(),
+		// 	&Pubkey::from_str(&perp_market_data.events_key.clone()).unwrap(),
+		// 	&mut mango_accounts_to_consume_events,
+		// 	14
+		// ).unwrap();
+		let mut transaction = Transaction::new_with_payer(&[instruction], Some(&self.signer.pubkey()));
 		self.solana_connection.try_tx_once(transaction, &self.signer)
 		
 	}
@@ -124,18 +124,18 @@ impl MangoClient {
 			expires_at,
 			10,
 			ExpiryType::Absolute).unwrap();
-		let mut mango_accounts_to_consume_events = [self.mango_account_pk.clone()];
-		
-		let consume_instruction = crate::instructions::consume_events(
-			&self.mango_program_id,
-			&self.mango_group_pk,
-			&self.mango_group.mango_cache,
-			&Pubkey::from_str(&perp_market_data.pubkey).unwrap(),
-			&Pubkey::from_str(&perp_market_data.events_key.clone()).unwrap(),
-			&mut mango_accounts_to_consume_events,
-			4
-		).unwrap();
-		let mut transaction = Transaction::new_with_payer(&[instruction, consume_instruction], Some(&self.signer.pubkey()));
+		// let mut mango_accounts_to_consume_events = [self.mango_account_pk.clone()];
+		//
+		// let consume_instruction = crate::instructions::consume_events(
+		// 	&self.mango_program_id,
+		// 	&self.mango_group_pk,
+		// 	&self.mango_group.mango_cache,
+		// 	&Pubkey::from_str(&perp_market_data.pubkey).unwrap(),
+		// 	&Pubkey::from_str(&perp_market_data.events_key.clone()).unwrap(),
+		// 	&mut mango_accounts_to_consume_events,
+		// 	14
+		// ).unwrap();
+		let mut transaction = Transaction::new_with_payer(&[instruction], Some(&self.signer.pubkey()));
 		self.solana_connection.try_tx_once(transaction, &self.signer)
 		
 	}
