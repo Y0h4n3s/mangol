@@ -597,6 +597,7 @@ impl FibStrat {
 			if !should_not_sleep {
 				let sleep_start = Instant::now();
 				println!("Sleeping for {} secs", self.action_interval_secs);
+				let mut sure_count = 0;
 				'sleep: loop {
 					let elapsed_secs = sleep_start.elapsed().as_secs();
 					if elapsed_secs > self.action_interval_secs {
@@ -610,12 +611,17 @@ impl FibStrat {
 							let perp_account = mango_account.perp_accounts[self.market.market_index];
 							println!("Asks: {} Bids: {} TAsks: {} TBids: {} Orders: {:?}", perp_account.asks_quantity, perp_account.bids_quantity, perp_account.taker_base, perp_account.taker_quote, mango_account.orders);
 							if perp_account.taker_base == 0 && perp_account.taker_quote == 0 && perp_account.asks_quantity == 0 && perp_account.bids_quantity == 0 && !mango_account.orders.iter().any(|order| *order != 0_i128){
+								sure_count += 1;
 								
-								println!("Order is filled or expired aborting sleep");
-								break 'sleep;
+							} else {
+								sure_count = 0;
 							}
 						}
 						
+					}
+					if sure_count > 5 {
+						println!("Order is filled or expired aborting sleep");
+						break 'sleep;
 					}
 					std::thread::sleep(Duration::from_secs(1))
 					
