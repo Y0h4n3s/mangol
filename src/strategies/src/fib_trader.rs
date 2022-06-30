@@ -65,7 +65,7 @@ pub struct FibStrat {
 
 const FIB_RATIO: f64 = 1.618;
 const PRICE_FIB_RATIO: f64 = 0.1618;
-const TRADE_AMOUNT: f64 = 10.0;
+const TRADE_AMOUNT: f64 = 30.0;
 const RISK_TOLERANCE: u16 = 2;
 const PROFIT_PRICE_DEPTH: u16 = 6;
 impl FibStrat {
@@ -346,21 +346,27 @@ impl FibStrat {
 				else if expected_base_filled > actual_base_filled   {
 					// handle partially filled order here
 					// save it to a partially filled list and do sth
-					mangol_mailer::send_text_with_content(format!("Buying back partial fill of {}", actual_base_filled));
-					let order_hash = self.mango_client.place_perp_order_with_base(
-						curr_perp_market_info,
-						&self.market,
-						Side::Bid,
-						oracle_price,
-						actual_base_filled,
-						OrderType::Market,
-						false,
-						None
-					)?;
-					let message = format!("Bought back {} https://explorer.solana.com/tx/{}", actual_base_filled, order_hash);
-					mangol_mailer::send_text_with_content(message.clone());
-					println!("{}", message);
-					self.mango_client.update()?;
+					// mangol_mailer::send_text_with_content(format!("Buying back partial fill of {}", actual_base_filled));
+					// let order_hash = self.mango_client.place_perp_order_with_base(
+					// 	curr_perp_market_info,
+					// 	&self.market,
+					// 	Side::Bid,
+					// 	oracle_price,
+					// 	actual_base_filled,
+					// 	OrderType::Market,
+					// 	false,
+					// 	None
+					// )?;
+					// let message = format!("Bought back {} https://explorer.solana.com/tx/{}", actual_base_filled, order_hash);
+					// mangol_mailer::send_text_with_content(message.clone());
+					// println!("{}", message);
+					// self.mango_client.update()?;
+					if order.depth > self.position.furthest_position {
+						self.position.furthest_position = order.depth
+					}
+					order.base_size = actual_base_filled as u64;
+					order.state = FibStratOrderState::PartiallyFilled;
+					self.position.state_history.push(previous_state.clone());
 					
 				}
 				
@@ -393,21 +399,35 @@ impl FibStrat {
 					}
 					// handle partially filled order here
 					// save it to a partially filled list and do sth
-					mangol_mailer::send_text_with_content(format!("Selling back partial fill of {}", actual_base_filled));
-					let order_hash = self.mango_client.place_perp_order_with_base(
-						curr_perp_market_info,
-						&self.market,
-						Side::Ask,
-						oracle_price,
-						actual_base_filled,
-						OrderType::Market,
-						false,
-						None
-					)?;
-					let message = format!("Bought back {} https://explorer.solana.com/tx/{}", actual_base_filled, order_hash);
-					mangol_mailer::send_text_with_content(message.clone());
-					println!("{}", message);
-					self.mango_client.update()?;
+					// mangol_mailer::send_text_with_content(format!("Selling back partial fill of {}", actual_base_filled));
+					// let order_hash = self.mango_client.place_perp_order_with_base(
+					// 	curr_perp_market_info,
+					// 	&self.market,
+					// 	Side::Ask,
+					// 	oracle_price,
+					// 	actual_base_filled,
+					// 	OrderType::Market,
+					// 	false,
+					// 	None
+					// )?;
+					// let message = format!("Bought back {} https://explorer.solana.com/tx/{}", actual_base_filled, order_hash);
+					// mangol_mailer::send_text_with_content(message.clone());
+					// println!("{}", message);
+					// self.mango_client.update()?;
+					if order.depth > self.position.furthest_position {
+						self.position.furthest_position = order.depth
+					}
+					// order was partially succesful
+					
+					order.base_size = actual_base_filled as u64;
+					order.state = FibStratOrderState::Filled;
+					order.depth = if order.depth > RISK_TOLERANCE { order.depth - 1} else if order.depth > 1 {order.depth } else {
+						println!("Last order for position Partially filled, setting to Neutral state");
+						self.position.current_state = FibStratPositionState::Neutral;
+						1
+					};
+					
+					self.position.state_history.push(previous_state.clone());
 					
 				}
 				else if expected_base_filled <= actual_base_filled {
@@ -447,7 +467,7 @@ impl FibStrat {
 		
 		let average_price = self.get_average_price()?;
 		let curr_position_size = self.get_position_size()?;
-		if self.position.current_state == FibStratPositionState::Neutral {
+		if self.position.current_state == FibStratPositionState::Neutral || curr_position_size == 0 {
 			// position is closed reset on next iteration
 			return Ok(())
 		}
@@ -537,7 +557,7 @@ impl FibStrat {
 			
 			let perp_account: PerpAccount = self.mango_client.mango_account.perp_accounts[self.market.market_index];
 			let curr_position_size = self.get_position_size()?;
-			if self.position.current_state == FibStratPositionState::Neutral {
+			if self.position.current_state == FibStratPositionState::Neutral || curr_position_size == 0{
 				// The position has been closed, reset
 				println!("Position in neutral state, resetting... {:?} {:?}", perp_account, self.position);
 				self.reset()?;
@@ -588,8 +608,9 @@ impl FibStrat {
 						if mango_account_info.value.is_some() {
 							let mango_account = MangoAccount::load_checked(mango_account_info.value.unwrap(), &self.mango_client.mango_program_id).unwrap();
 							let perp_account = mango_account.perp_accounts[self.market.market_index];
-							println!("Asks: {} Bids: {} Orders: {:?}", perp_account.asks_quantity, perp_account.bids_quantity, mango_account.orders);
-							if perp_account.asks_quantity == 0 && perp_account.bids_quantity == 0 && !mango_account.orders.iter().any(|order| *order != 0_i128){
+							println!("Asks: {} Bids: {} TAsks: {} TBids: {} Orders: {:?}", perp_account.asks_quantity, perp_account.bids_quantity, perp_account.taker_base, perp_account.taker.quote, mango_account.orders);
+							if perp_account.taker_base == 0 && perp_account.taker_quote == 0 && perp_account.asks_quantity == 0 && perp_account.bids_quantity == 0 && !mango_account.orders.iter().any(|order| *order != 0_i128){
+								
 								println!("Order is filled or expired aborting sleep");
 								break 'sleep;
 							}

@@ -52,7 +52,7 @@ impl MangoClient {
 	
 	pub fn place_perp_order(&self, perp_market: &PerpMarketInfo, perp_market_data: &PerpMarketData, side: Side, price: f64, quantity: i64, order_type: OrderType, reduce_only: bool, expiry_timestamp: Option<u64>) -> MangolResult<String> {
 		let (native_price, native_quantity) = perp_market.lotToNativePriceQuantity(price, quantity.try_into().unwrap());
-		println!("Order price: {} Order quantity: {}", price, quantity / native_price);
+		println!("Order price: {} Order quantity: {}", price * 100, quantity * 100 / native_price);
 		let mut expires_at = None;
 		if expiry_timestamp.is_some() {
 			expires_at = Some(SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs() + expiry_timestamp.unwrap());
