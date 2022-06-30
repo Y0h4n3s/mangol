@@ -548,7 +548,12 @@ impl FibStrat {
 			match &self.position.current_state {
 				FibStratPositionState::Selling(order) | FibStratPositionState::Buying(order) => {
 					if order.tx_hash.is_some() {
+						
 						let mut fetch_tries = 10;
+						if order.tx_hash.as_ref().unwrap().eq("") {
+							fetch_tries = 0;
+							should_not_sleep = true
+						}
 						while fetch_tries > 0 {
 							if let Ok(order_tx) = self.mango_client.solana_connection.rpc_client.get_transaction(&Signature::from_str(&order.tx_hash.as_ref().unwrap()).unwrap(), UiTransactionEncoding::Base64 ) {
 								fetch_tries = 0;
