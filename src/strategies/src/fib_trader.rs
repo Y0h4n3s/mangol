@@ -537,7 +537,6 @@ impl FibStrat {
 			
 			let perp_account: PerpAccount = self.mango_client.mango_account.perp_accounts[self.market.market_index];
 			let curr_position_size = self.get_position_size()?;
-			
 			if self.position.current_state == FibStratPositionState::Neutral {
 				// The position has been closed, reset
 				println!("Position in neutral state, resetting... {:?} {:?}", perp_account, self.position);
@@ -584,7 +583,8 @@ impl FibStrat {
 						if mango_account_info.value.is_some() {
 							let mango_account = MangoAccount::load_checked(mango_account_info.value.unwrap(), &self.mango_client.mango_program_id).unwrap();
 							let perp_account = mango_account.perp_accounts[self.market.market_index];
-							if perp_account.asks_quantity == 0 && perp_account.bids_quantity == 0 {
+							println!("Asks: {} Bids: {} Orders: {:?}", perp_account.asks_quantity, perp_account.bids_quantity, mango_account.orders);
+							if perp_account.asks_quantity == 0 && perp_account.bids_quantity == 0 && !mango_account.orders.iter().any(|order| *order != 0_i128){
 								println!("Order is filled or expired aborting sleep");
 								break 'sleep;
 							}

@@ -40,12 +40,12 @@ impl MangoClient {
 	}
 	
 	pub fn update(&mut self) -> MangolResult<()> {
-		let mango_account_info = self.solana_connection.rpc_client.get_account_with_commitment(&self.mango_account_pk, CommitmentConfig::processed()).unwrap().value.unwrap();
+		let mango_account_info = self.solana_connection.rpc_client.get_account_with_commitment(&self.mango_account_pk, CommitmentConfig::finalized()).unwrap().value.unwrap();
 		self.mango_account = MangoAccount::load_checked(mango_account_info, &self.mango_program_id).unwrap();
 		
-		let mango_group_account_info = self.solana_connection.rpc_client.get_account_with_commitment(&self.mango_group_pk, CommitmentConfig::processed()).unwrap().value.unwrap();
+		let mango_group_account_info = self.solana_connection.rpc_client.get_account_with_commitment(&self.mango_group_pk, CommitmentConfig::finalized()).unwrap().value.unwrap();
 		self.mango_group = MangoGroup::load_checked(mango_group_account_info, &self.mango_program_id).unwrap();
-		let mango_cache_account_info = self.solana_connection.rpc_client.get_account_with_commitment(&self.mango_group.mango_cache, CommitmentConfig::processed())?.value.unwrap();
+		let mango_cache_account_info = self.solana_connection.rpc_client.get_account_with_commitment(&self.mango_group.mango_cache, CommitmentConfig::finalized())?.value.unwrap();
 		self.mango_cache = MangoCache::load_checked(mango_cache_account_info, &self.mango_program_id, &self.mango_group).unwrap();
 		Ok(())
 	}
@@ -83,7 +83,7 @@ impl MangoClient {
 		let consume_instruction = crate::instructions::consume_events(
 			&self.mango_program_id,
 			&self.mango_group_pk,
-			&self.mango_cache_pk,
+			&self.mango_group.mango_cache,
 			&Pubkey::from_str(&perp_market_data.pubkey).unwrap(),
 			&Pubkey::from_str(&perp_market_data.events_key.clone()).unwrap(),
 			&mut mango_accounts_to_consume_events,
@@ -129,7 +129,7 @@ impl MangoClient {
 		let consume_instruction = crate::instructions::consume_events(
 			&self.mango_program_id,
 			&self.mango_group_pk,
-			&self.mango_cache_pk,
+			&self.mango_group.mango_cache,
 			&Pubkey::from_str(&perp_market_data.pubkey).unwrap(),
 			&Pubkey::from_str(&perp_market_data.events_key.clone()).unwrap(),
 			&mut mango_accounts_to_consume_events,
