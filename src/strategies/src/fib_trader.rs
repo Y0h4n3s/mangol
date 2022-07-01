@@ -136,8 +136,13 @@ impl FibStrat {
 				order.tx_hash = Some(order_hash);
 				order.price = oracle_price;
 				order.state = FibStratOrderState::Filled;
-				self.mango_client.update()?;
-				let perp_account_after: PerpAccount = self.mango_client.mango_account.perp_accounts[self.market.market_index];
+				loop {
+					self.mango_client.update()?;
+					let perp_account_after: PerpAccount = self.mango_client.mango_account.perp_accounts[self.market.market_index];
+					if perp_account_after.base_position != 0 {
+						break
+					}
+				}
 				let trade_quantity = (self.market.ui_to_quote_units(fib_calculator::get_quantity_at_n( 1, TRADE_AMOUNT)?)/ self.mango_client.mango_group.perp_markets[self.market.market_index].quote_lot_size as f64).round().to_string().parse::<i64>().unwrap();
 				let native_price = perp_market.lot_to_native_price(oracle_price);
 				order.base_size = (trade_quantity / native_price) as u64;
